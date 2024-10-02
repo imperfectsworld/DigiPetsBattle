@@ -1,0 +1,6 @@
+@Digi_Pets_Battle_HostAddress = http://localhost:5252
+
+GET {{Digi_Pets_Battle_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
