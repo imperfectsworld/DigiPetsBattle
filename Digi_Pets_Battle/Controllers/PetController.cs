@@ -1,6 +1,7 @@
 
 
 using Digi_Pets_Battle.Models;
+using Digi_Pets_Battle.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Digi_Pets_Battle.Controllers;
@@ -12,7 +13,12 @@ public class PetController : Controller
 {
     private DigiPetsDbContext dbContext = new DigiPetsDbContext();
     private Random random = new Random();
-    // private readonly [NAME OF SERVICE] [service]
+    private readonly AccountDetailServices _service;
+
+    public PetController(AccountDetailServices accountDetailServices)
+    {
+        _service = accountDetailServices;
+    }
 
     [HttpGet()]
     public IActionResult GetAllPets(int? accountId = null)
