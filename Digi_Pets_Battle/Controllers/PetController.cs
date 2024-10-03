@@ -88,19 +88,40 @@ public class PetController : Controller
         {
             return NotFound("No matching Id");
         }
-
+        float randomNumber = random.Next(1, 4);
+        train.Strength += randomNumber;
+        dbContext.SaveChanges();
         return Ok(train);
     }
 
     [HttpPost("/{id}/Battle")]
     public IActionResult BattlePets(int id, int opponentId)
     {
-        Pet fighter1 = dbContext.Pets.FirstOrDefault(pet => pet.Id == id);
-        Pet fighter2 = dbContext.Pets.FirstOrDefault(pet => pet.Id == opponentId);
-        if (fighter1 == null && fighter2 == null)
+        BattleResult battle = new BattleResult();
+        battle.win = false;
+        battle.fighter1 = dbContext.Pets.FirstOrDefault(pet => pet.Id == id);
+        battle.fighter2 = dbContext.Pets.FirstOrDefault(pet => pet.Id == opponentId);
+        if (battle.fighter1 == null || battle.fighter2 == null)
         {
             return NotFound("No matching Id");
         }
-        return Ok(fighter1);
+        float fighter1Ap = (float)(battle.fighter1.Health * battle.fighter1.Strength * battle.fighter1.Experience * (random.NextDouble()));
+        
+        float fighter2Ap = (float)(battle.fighter2.Health * battle.fighter2.Strength * battle.fighter2.Experience * (random.NextDouble()));
+
+        float totalPower = fighter1Ap + fighter2Ap;
+
+        float damageF1 = fighter1Ap / totalPower;
+        float damageF2 = fighter2Ap / totalPower;
+
+        battle.fighter1.Health = battle.fighter1.Health - (battle.fighter1.Health *  damageF2);
+        battle.fighter2.Health = battle.fighter2.Health - (battle.fighter2.Health * damageF1);
+
+        battle.fighter1.Experience += 1;
+        battle.fighter2.Experience += 1;
+
+        battle.win = fighter1Ap > fighter2Ap;
+
+        return Ok(battle);
     }
 }
