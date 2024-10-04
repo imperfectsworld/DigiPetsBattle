@@ -12,22 +12,29 @@ public class AccountDetailServices
         _httpClient.BaseAddress = new Uri("http://localhost:8080/accounts");
     }
 
-    public async Task<AccountDetails> GetAccountDetailsByApiKey(string apiKey)
+    public async Task<AccountDetails> PerformAction(string apiKey, string action)
     {
-        AccountDetails result = await _httpClient.GetFromJsonAsync<AccountDetails>($"/by-key/{apiKey}");
-        return (result);
-    }
+        HttpResponseMessage response = await _httpClient.PostAsync($"/by-key/{apiKey}/action?action={action}", null);
 
-    public async Task<AccountDetails> GetAccountDetails(long id, string apiKey)
-    {
-        AccountDetails result = await _httpClient.GetFromJsonAsync<AccountDetails>($"?username={id}n&apiKey={apiKey}");
-        return result;
-    }
+        if (response.IsSuccessStatusCode)
+        {
+            AccountDetails accountDetails = await response.Content.ReadFromJsonAsync<AccountDetails>();
+            return accountDetails;
+        }
 
-    public async Task<AccountDetails> GettingAction(string action, string apiKey)
+        return null; // Handle the case where the response is not successful
+    }
+    public async Task<AccountDetails> GetAccountByApiKey(string apiKey)
     {
-        AccountDetails result = await _httpClient.GetFromJsonAsync<AccountDetails>($"/by-key/{apiKey}/action?action={action}");
-        return result;
+        HttpResponseMessage response = await _httpClient.GetAsync($"/by-key/{apiKey}");
+
+        if (response.IsSuccessStatusCode)
+        {
+            AccountDetails accountDetails = await response.Content.ReadFromJsonAsync<AccountDetails>();
+            return accountDetails;
+        }
+
+        return null;
     }
 }
     

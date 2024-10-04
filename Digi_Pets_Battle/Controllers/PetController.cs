@@ -46,8 +46,14 @@ public class PetController : Controller
     }
 
     [HttpPost()]
-    public IActionResult AddPet([FromBody] Pet newPet)
+    public async Task<IActionResult> AddPet([FromHeader(Name = "X-API-Key")] string apiKey, [FromBody] Pet newPet)
     {
+        AccountDetails account = await _service.PerformAction(apiKey, "CREATE");
+        if (account == null)
+        {
+            return Unauthorized();
+        }
+        newPet.AccountId = account.id;
         newPet.Id = 0;
         dbContext.Pets.Add(newPet);
         dbContext.SaveChanges();
@@ -55,30 +61,49 @@ public class PetController : Controller
     }
 
     [HttpDelete("{id}")]
-    public IActionResult KillPet(int id)
+    public async Task<IActionResult> KillPet([FromHeader(Name = "X-API-Key")] string apiKey, int id)
     {
         Pet dead = dbContext.Pets.FirstOrDefault(pet => pet.Id == id);
         if (dead == null)
         {
             return NotFound("No matching Id");
         }
-        else
+        AccountDetails account = await _service.GetAccountByApiKey(apiKey);
+        if (account == null)
         {
-            dbContext.Pets.Remove(dead);
+            return Unauthorized();
+        }
+        if (dead.AccountId != account.id)
+        {
+            return Forbid();  // 403 Forbidden if the pet doesn't belong to the account
+        }
+        dbContext.Pets.Remove(dead);
             dbContext.SaveChanges();
             return NoContent();
         }
-    }
+
 
     [HttpPost("/{id}/Heal")]
-    public IActionResult AddHealthPet(int id)
+    public async Task<IActionResult> AddHealthPet([FromHeader(Name = "X-API-Key")] string apiKey, int id)
     {
-        
+
         Pet healthy = dbContext.Pets.FirstOrDefault(pet => pet.Id == id);
         if (healthy == null)
         {
             return NotFound("No matching Id");
         }
+        AccountDetails account = await _service.PerformAction(apiKey, "HEAL");
+        if (account == null)
+        {
+            return Unauthorized();
+        }
+
+        // Step 2: Ensure the pet belongs to the account
+        if (healthy.AccountId != account.id)
+        {
+            return Forbid();
+        }
+
 
         float healthyPet = (float)(random.NextDouble() * (0.3 - 0.1) + 0.1);
         healthy.Health = Math.Min(healthy.Health.GetValueOrDefault() + healthyPet, 1.0f); 
@@ -87,14 +112,24 @@ public class PetController : Controller
         return Ok(healthy);
         
     }
-
     [HttpPost("/{id}/Train")]
-    public IActionResult TrainPet(int id)
+    public async Task<IActionResult> TrainPet([FromHeader(Name = "X-API-Key")] string apiKey, int id)
     {
         Pet train = dbContext.Pets.FirstOrDefault(pet => pet.Id == id);
         if (train == null)
         {
             return NotFound("No matching Id");
+        }
+        AccountDetails account = await _service.PerformAction(apiKey, "TRAIN");
+        if (account == null)
+        {
+            return Unauthorized();
+        }
+
+        // Step 2: Ensure the pet belongs to the account
+        if (train.AccountId != account.id)
+        {
+            return Forbid();
         }
         float randomNumber = random.Next(1, 4);
         train.Strength += randomNumber;
@@ -102,8 +137,9 @@ public class PetController : Controller
         return Ok(train);
     }
 
+
     [HttpPost("/{id}/Battle")]
-    public IActionResult BattlePets(int id, int opponentId)
+    public async Task<IActionResult> BattlePets([FromHeader(Name = "X-API-Key")] string apiKey, int id, int opponentId)
     {
         BattleResult battle = new BattleResult();
         battle.win = false;
@@ -112,6 +148,17 @@ public class PetController : Controller
         if (battle.fighter1 == null || battle.fighter2 == null)
         {
             return NotFound("No matching Id");
+        }
+        AccountDetails account = await _service.PerformAction(apiKey, "BATTLE");
+        if (account == null)
+        {
+            return Unauthorized();
+        }
+
+        // Step 2: Ensure the pet belongs to the account
+        if (battle.fighter1.AccountId != account.id || battle.fighter2.AccountId != account.id)
+        {
+            return Forbid();
         }
         float fighter1Ap = (float)(battle.fighter1.Health * battle.fighter1.Strength * battle.fighter1.Experience * (random.NextDouble()));
         
